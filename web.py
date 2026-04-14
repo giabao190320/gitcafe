@@ -102,7 +102,8 @@ def register():
         conn.commit()
         return jsonify({"success": True})
     except: return jsonify({"success": False}), 400
-    finally: conn.close()
+    finally:
+        if conn: conn.close()
 
 @app.route('/api/khach-hang')
 def get_kh():
@@ -111,7 +112,8 @@ def get_kh():
         cursor = conn.cursor(dictionary=True)
         cursor.execute("SELECT id, ho_ten, so_dt, email, lat_khach_hang, long_khach_hang, DATE_FORMAT(Ngay_rao, '%d/%m/%Y') as Ngay_rao FROM khach_hang ORDER BY id DESC")
         return jsonify(cursor.fetchall())
-    finally: conn.close()
+    finally:
+        if conn: conn.close()
 
 @app.route('/api/cua-hang')
 def get_ch():
@@ -120,7 +122,8 @@ def get_ch():
         cursor = conn.cursor(dictionary=True)
         cursor.execute("SELECT id, ten_cua_hang, dia_chi, lat_cua_hang, long_cua_hang FROM cua_hang")
         return jsonify(cursor.fetchall())
-    finally: conn.close()
+    finally:
+        if conn: conn.close()
 
 @app.route('/api/khach-hang/add', methods=['POST'])
 def add_kh():
@@ -131,7 +134,8 @@ def add_kh():
         cursor.execute("INSERT INTO khach_hang (ho_ten, so_dt, email) VALUES (%s, %s, %s)", (d['hoten'], d['sdt'], d.get('email', '')))
         conn.commit()
         return jsonify({"success": True})
-    finally: conn.close()
+    finally:
+        if conn: conn.close()
 
 @app.route('/api/khach-hang/delete', methods=['POST'])
 def del_kh():
@@ -144,7 +148,8 @@ def del_kh():
         cursor.execute("DELETE FROM khach_hang WHERE id = %s", (d['id'],))
         conn.commit()
         return jsonify({"success": True})
-    finally: conn.close()
+    finally:
+        if conn: conn.close()
 
 @app.route('/api/san-pham')
 def get_sp():
@@ -153,7 +158,8 @@ def get_sp():
         cursor = conn.cursor(dictionary=True)
         cursor.execute("SELECT * FROM san_pham ORDER BY id DESC")
         return jsonify(cursor.fetchall())
-    finally: conn.close()
+    finally:
+        if conn: conn.close()
 
 @app.route('/api/san-pham/add', methods=['POST'])
 def add_sp():
@@ -164,7 +170,8 @@ def add_sp():
         cursor.execute("INSERT INTO san_pham (ten_san_pham, loai_cf, gia_ban, don_vi) VALUES (%s, %s, %s, %s)", (d['ten'], d['loai'], d['gia'], d['donvi']))
         conn.commit()
         return jsonify({"success": True})
-    finally: conn.close()
+    finally:
+        if conn: conn.close()
 
 @app.route('/api/san-pham/delete', methods=['POST'])
 def del_sp():
@@ -176,7 +183,8 @@ def del_sp():
         cursor.execute("DELETE FROM san_pham WHERE id = %s", (d['id'],))
         conn.commit()
         return jsonify({"success": True})
-    finally: conn.close()
+    finally:
+        if conn: conn.close()
 
 @app.route('/api/don-hang')
 def get_dh():
@@ -185,7 +193,8 @@ def get_dh():
         cursor = conn.cursor(dictionary=True)
         cursor.execute("SELECT d.id, k.ho_ten as khach_hang, DATE_FORMAT(d.ngay_mua, '%d/%m/%Y %H:%i') as ngay, d.tong_tien, d.trang_thai FROM don_hang d JOIN khach_hang k ON d.id_khach_hang = k.id ORDER BY d.id DESC")
         return jsonify(cursor.fetchall())
-    finally: conn.close()
+    finally:
+        if conn: conn.close()
 
 @app.route('/api/don-hang/add', methods=['POST'])
 def add_dh():
@@ -196,7 +205,8 @@ def add_dh():
         cursor.execute("INSERT INTO don_hang (id_khach_hang, id_cua_hang, tong_tien, trang_thai) VALUES (%s, 1, %s, 'hoan_thanh')", (d['id_khach'], d['tong_tien']))
         conn.commit()
         return jsonify({"success": True})
-    finally: conn.close()
+    finally:
+        if conn: conn.close()
 
 @app.route('/api/kho')
 def get_kho():
@@ -205,7 +215,8 @@ def get_kho():
         cursor = conn.cursor(dictionary=True)
         cursor.execute("SELECT id, ma_hang as ma, ten_nguyen_lieu as ten, ton_kho as ton, muc_bao_dong as min FROM nguon_nguyen_lieu ORDER BY id DESC")
         return jsonify(cursor.fetchall())
-    finally: conn.close()
+    finally:
+        if conn: conn.close()
 
 @app.route('/api/kho/add', methods=['POST'])
 def add_kho():
@@ -216,7 +227,8 @@ def add_kho():
         cursor.execute("INSERT INTO nguon_nguyen_lieu (ma_hang, ten_nguyen_lieu, ton_kho, muc_bao_dong) VALUES (%s, %s, %s, %s)", (d['ma'], d['ten'], d['ton'], d['min']))
         conn.commit()
         return jsonify({"success": True})
-    finally: conn.close()
+    finally:
+        if conn: conn.close()
 
 @app.route('/api/kho/delete', methods=['POST'])
 def del_kho():
@@ -232,7 +244,8 @@ def del_kho():
             cursor.execute("DELETE FROM nguon_nguyen_lieu WHERE id = %s", (res[0],))
             conn.commit()
         return jsonify({"success": True})
-    finally: conn.close()
+    finally:
+        if conn: conn.close()
 
 @app.route('/api/doanh-thu')
 def get_dt():
@@ -243,7 +256,8 @@ def get_dt():
         res = cursor.fetchall()
         for r in res: r['tien'] = float(r['tien']) if r['tien'] else 0
         return jsonify(res)
-    finally: conn.close()
+    finally:
+        if conn: conn.close()
 
 # --- API ADMIN (QUẢN LÝ TÀI KHOẢN) ---
 @app.route('/api/admin/users')
@@ -253,7 +267,8 @@ def admin_get_users():
         cursor = conn.cursor(dictionary=True)
         cursor.execute("SELECT username as tk, role as quyen, status as trangThai FROM users ORDER BY id DESC")
         return jsonify(cursor.fetchall())
-    finally: conn.close()
+    finally:
+        if conn: conn.close()
 
 @app.route('/api/admin/approve', methods=['POST'])
 def admin_approve():
@@ -264,7 +279,8 @@ def admin_approve():
         cursor.execute("UPDATE users SET status = 'da_duyet' WHERE username = %s", (d['tk'],))
         conn.commit()
         return jsonify({"success": True})
-    finally: conn.close()
+    finally:
+        if conn: conn.close()
 
 @app.route('/api/admin/delete-user', methods=['POST'])
 def admin_delete_user():
@@ -275,7 +291,8 @@ def admin_delete_user():
         cursor.execute("DELETE FROM users WHERE username = %s AND role != 'admin'", (d['tk'],))
         conn.commit()
         return jsonify({"success": True})
-    finally: conn.close()
+    finally:
+        if conn: conn.close()
 
 # --- FILE TĨNH ---
 @app.route('/')
