@@ -5,65 +5,106 @@ import os
 
 app = Flask(__name__)
 
-# Cấu hình Database
-db_config = {
-    "host": os.environ.get("MYSQLHOST", "localhost"),
-    "user": os.environ.get("MYSQLUSER", "root"),
-    "password": os.environ.get("MYSQLPASSWORD", ""),
-    "database": os.environ.get("MYSQLDATABASE", "railway"), # Railway mặc định tên db là railway
-    "port": int(os.environ.get("MYSQLPORT", 3306))
-}
+import time
 
-# Khởi tạo Pool
-db_pool = None
-try:
-    db_pool = mysql.connector.pooling.MySQLConnectionPool(
-        pool_name="mypool",
-        pool_size=10,
-        **db_config
-    )
-    
-    def init_db():
-        conn = None
+# Cấu hình Database
+def get_db_config():
+    mysql_url = os.environ.get("MYSQL_URL") or os.environ.get("DATABASE_URL")
+    if mysql_url and mysql_url.startswith("mysql://"):
         try:
+            from urllib.parse import urlparse
+            result = urlparse(mysql_url)
+            return {
+                "host": result.hostname,
+                "user": result.username,
+                "password": result.password,
+                "database": result.path[1:],
+                "port": result.port or 3306,
+                "connect_timeout": 20
+            }
+        except Exception as e:
+            print(f"Lỗi parse URL: {e}")
+    
+    return {
+        "host": os.environ.get("MYSQLHOST", "localhost"),
+        "user": os.environ.get("MYSQLUSER", "root"),
+        "password": os.environ.get("MYSQLPASSWORD", ""),
+        "database": os.environ.get("MYSQLDATABASE", "railway"),
+        "port": int(os.environ.get("MYSQLPORT", 3306)),
+        "connect_timeout": 20
+    }
+
+db_config = get_db_config()
+db_pool = None
+
+def init_db_with_retry():
+    global db_pool
+    max_retries = 5
+    retry_delay = 5
+    
+    for i in range(max_retries):
+        try:
+            print(f"Thử kết nối DB lần {i+1}/{max_retries} (Host: {db_config['host']})...")
+            db_pool = mysql.connector.pooling.MySQLConnectionPool(
+                pool_name="mypool",
+                pool_size=5,
+                **db_config
+            )
+            
+            # Thử lấy một kết nối để kiểm tra và chạy init script
             conn = db_pool.get_connection()
             cursor = conn.cursor()
+            
             if os.path.exists('database.sql'):
-                print("Đang khởi tạo database...")
+                print("Đang nạp file database.sql...")
                 with open('database.sql', 'r', encoding='utf-8') as f:
-                    content = f.read()
-                    # Chia nhỏ các câu lệnh, loại bỏ CREATE DATABASE và USE để tránh lỗi trên Railway
-                    commands = content.split(';')
+                    # Đọc toàn bộ file và tách theo dấu ; nhưng thông minh hơn
+                    sql_content = f.read()
+                    # Loại bỏ các comment SQL
+                    sql_content = "\n".join([line for line in sql_content.split("\n") if not line.strip().startswith("--")])
+                    commands = sql_content.split(';')
+                    
                     for cmd in commands:
                         c = cmd.strip()
-                        if c:
-                            upper_c = c.upper()
-                            if upper_c.startswith(('CREATE DATABASE', 'USE')):
-                                continue
-                            try:
-                                cursor.execute(c)
-                            except Exception as e:
-                                # Bỏ qua lỗi nếu bảng đã tồn tại hoặc lỗi nhỏ khác
-                                pass
-                conn.commit()
-                print("Khởi tạo database thành công!")
+                        if not c: continue
+                        
+                        # Bỏ qua các lệnh tạo db hoặc use db vì Railway đã quản lý việc này
+                        if c.upper().startswith(('CREATE DATABASE', 'USE')):
+                            continue
+                            
+                        try:
+                            cursor.execute(c)
+                        except Exception as sql_e:
+                            # Chỉ in lỗi nếu không phải lỗi "đã tồn tại"
+                            if "already exists" not in str(sql_e).lower():
+                                print(f"Lỗi thực thi SQL: {sql_e}")
+                                
+            conn.commit()
             cursor.close()
-        except Exception as e: 
-            print(f"DB Init Error: {e}")
-        finally:
-            if conn: conn.close()
+            conn.close()
+            print("Kết nối và khởi tạo Database THÀNH CÔNG!")
+            return True
             
-    init_db()
-except Exception as e: 
-    print(f"Pool Error: {e}")
+        except Exception as e:
+            print(f"Lỗi kết nối DB: {e}")
+            if i < max_retries - 1:
+                print(f"Thử lại sau {retry_delay} giây...")
+                time.sleep(retry_delay)
+            else:
+                print("ĐÃ THỬ HẾT CÁCH NHƯNG KHÔNG KẾT NỐI ĐƯỢC DB.")
+    return False
+
+# Chạy khởi tạo
+init_db_with_retry()
 
 def get_db():
     try: 
         if db_pool:
             return db_pool.get_connection()
-        return None
+        # Fallback kết nối trực tiếp nếu pool hỏng
+        return mysql.connector.connect(**db_config)
     except Exception as e:
-        print(f"Get DB Connection Error: {e}")
+        print(f"Lỗi lấy kết nối DB: {e}")
         return None
 
 # --- API ---
