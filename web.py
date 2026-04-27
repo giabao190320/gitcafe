@@ -249,6 +249,27 @@ def add_dh():
     finally:
         if conn: conn.close()
 
+@app.route('/api/don-hang/delete', methods=['POST'])
+def del_dh():
+    conn = get_db()
+    try:
+        d = request.json
+        order_id = d.get('id')
+        if not order_id:
+            return jsonify({"success": False, "message": "Thiếu ID đơn hàng"}), 400
+            
+        cursor = conn.cursor()
+        # Xóa chi tiết đơn hàng trước (khóa ngoại)
+        cursor.execute("DELETE FROM chi_tiet_don_hang WHERE id_don_hang = %s", (order_id,))
+        # Xóa đơn hàng chính
+        cursor.execute("DELETE FROM don_hang WHERE id = %s", (order_id,))
+        conn.commit()
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+    finally:
+        if conn: conn.close()
+
 @app.route('/api/kho')
 def get_kho():
     conn = get_db()

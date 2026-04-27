@@ -39,6 +39,7 @@
               <th>Ngày mua</th>
               <th>Tổng tiền</th>
               <th>Trạng thái</th>
+              <th>Hành động</th>
             </tr>
           </thead>
           <tbody id="ds-donhang"></tbody>
@@ -74,6 +75,7 @@
               <td>${d.ngay}</td>
               <td style="color: green; font-weight: bold;">${tongTien.toLocaleString()}đ</td>
               <td><span style="background: #d4edda; padding: 3px 8px; border-radius: 3px;">${d.trang_thai}</span></td>
+              <td><button style="background:red; color:white; border:none; padding:5px 10px; cursor:pointer;" onclick="xoaDonHang(${d.id})">Xóa</button></td>
             </tr>`;
           });
           document.getElementById("ds-donhang").innerHTML = html;
@@ -100,6 +102,24 @@
             document.getElementById("tongtien").value = "";
           } else {
             alert("Lỗi: " + (data.message || data.error));
+          }
+        });
+      }
+
+      // 4. Xóa đơn hàng
+      function xoaDonHang(id) {
+        if(!confirm("Bạn có chắc muốn xóa đơn hàng này?")) return;
+        fetch('/api/don-hang/delete', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ id })
+        })
+        .then(res => res.json())
+        .then(data => {
+          if(data.success) {
+            taiDonHang();
+          } else {
+            alert("Không thể xóa: " + (data.message || "Lỗi không xác định"));
           }
         });
       }
