@@ -76,7 +76,7 @@
                         <td><b style="color:${item.ton < item.min ? "red" : "black"}">${item.ton}</b></td>
                         <td>${item.min}</td>
                         <td><span class="status ${statusClass}">${statusText}</span></td>
-                        ${user.quyen === "admin" ? `<td><button style="background:red; color:white; border:none; padding:5px; cursor:pointer;" onclick="xoaDong('${item.ma}')">Xóa</button></td>` : ""}
+                        ${user.quyen === "admin" ? `<td><button style="background:red; color:white; border:none; padding:5px; cursor:pointer;" onclick="xoaDong(${item.id})">Xóa</button></td>` : ""}
                     </tr>`;
                 });
                 document.getElementById("ds-kho").innerHTML = html || '<tr><td colspan="6" style="text-align:center">Kho trống</td></tr>';
@@ -104,17 +104,17 @@
                     document.getElementById("ma").value = "";
                     document.getElementById("ten").value = "";
                 } else {
-                    alert("Lỗi: " + res.error);
+                    alert("Lỗi: " + (res.message || "Không thể thêm"));
                 }
             });
         }
 
-        function xoaDong(ma) {
+        function xoaDong(id) {
             if(!confirm("Bạn có chắc muốn xóa mặt hàng này?")) return;
             fetch('/api/kho/delete', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ ma })
+                body: JSON.stringify({ id })
             })
             .then(res => res.json())
             .then(data => {

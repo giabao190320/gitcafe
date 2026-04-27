@@ -276,15 +276,21 @@ def del_kho():
     conn = get_db()
     try:
         d = request.json
+        item_id = d.get('id')
+        if not item_id:
+            return jsonify({"success": False, "message": "Thiếu ID nguyên liệu"}), 400
+            
         cursor = conn.cursor()
-        cursor.execute("SELECT id FROM nguon_nguyen_lieu WHERE ma_hang = %s", (d['ma'],))
-        res = cursor.fetchone()
-        if res:
-            cursor.execute("DELETE FROM kho_nguyen_lieu WHERE id_nguyen_lieu = %s", (res[0],))
-            cursor.execute("DELETE FROM chi_tiet_san_xuat WHERE id_nguyen_lieu = %s", (res[0],))
-            cursor.execute("DELETE FROM nguon_nguyen_lieu WHERE id = %s", (res[0],))
-            conn.commit()
+        # Xóa các ràng buộc trước
+        cursor.execute("DELETE FROM kho_nguyen_lieu WHERE id_nguyen_lieu = %s", (item_id,))
+        cursor.execute("DELETE FROM chi_tiet_san_xuat WHERE id_nguyen_lieu = %s", (item_id,))
+        # Xóa nguyên liệu chính
+        cursor.execute("DELETE FROM nguon_nguyen_lieu WHERE id = %s", (item_id,))
+        conn.commit()
         return jsonify({"success": True})
+    except Exception as e:
+        print(f"Lỗi xóa kho: {e}")
+        return jsonify({"success": False, "message": str(e)}), 500
     finally:
         if conn: conn.close()
 
